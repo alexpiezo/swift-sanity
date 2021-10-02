@@ -10,16 +10,24 @@ public extension SanityType {
         public let children: [Child]
         public let style: String
         public let markDefs: [MarkDef]
+        public let listItem: ListItem?
+
+        public enum ListItem{
+            case number(Int)
+            case bullet
+        }
 
         public struct MarkDef {
             public let _key: String
             public let _type: String
             public let href: String?
+            public let emailAddress: String?
 
-            public init(_key: String, _type: String, href: String?) {
+            public init(_key: String, _type: String, href: String?, emailAddress: String?) {
                 self._key = _key
                 self._type = _type
                 self.href = href
+                self.emailAddress = emailAddress
             }
         }
 
@@ -47,16 +55,39 @@ public extension SanityType {
             self.children = children
             self.style = style
             self.markDefs = markDefs
+            self.listItem = nil
+        }
+    }
+}
+extension CodingUserInfoKey {
+    static let listItemNumberValue = CodingUserInfoKey(rawValue: "listItemNumberValue")!
+}
+
+extension JSONDecoder {
+    var listItemNumberValue: Int {
+        set { userInfo[.listItemNumberValue] = newValue }
+        get {
+            return userInfo[.listItemNumberValue] as? Int ?? 0
+        }
+    }
+}
+
+extension Decoder {
+    var listItemNumberValue: Int {
+        set {  }
+        get {
+            return userInfo[.listItemNumberValue] as? Int ?? 0
         }
     }
 }
 
 extension SanityType.Block: Decodable {
     enum CodingKeys: String, CodingKey {
-        case _key, _type, children, markDefs, style
+        case _key, _type, children, markDefs, style, listItem
     }
 
     public init(from decoder: Decoder) throws {
+        var d = decoder
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let type = try container.decode(String.self, forKey: ._type)
         if type != "block" {
@@ -67,6 +98,19 @@ extension SanityType.Block: Decodable {
         self.children = try container.decode([Child].self, forKey: .children)
         self.markDefs = try container.decode([MarkDef].self, forKey: .markDefs)
         self.style = try container.decode(String.self, forKey: .style)
+        if let listItemString = try container.decodeIfPresent(String.self, forKey: .listItem){
+            switch  listItemString {
+            case "number":
+                d.listItemNumberValue += 1
+                self.listItem = .number(d.listItemNumberValue)
+            case "bullet":
+                self.listItem = .bullet
+            default:
+                self.listItem = nil
+            }
+        }else{
+            self.listItem = nil
+        }
     }
 }
 
