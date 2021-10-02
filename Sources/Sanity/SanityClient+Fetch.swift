@@ -76,7 +76,7 @@ public extension SanityClient.Query where T: Decodable {
         public let queryError: QueryError?
 
         /// Error message
-        public let message: String
+        public let message: String?
 
         /// Status code is a http status code returned by the error object
         public let statusCode: Int
@@ -101,7 +101,7 @@ public extension SanityClient.Query where T: Decodable {
         }
 
         public var errorDescription: String? {
-            NSLocalizedString(self.message, comment: self.error)
+            NSLocalizedString(self.message ?? "", comment: self.error)
         }
 
         public var queryErrorDescription: String {
@@ -151,6 +151,21 @@ public extension SanityClient.Query where T: Decodable {
             }
         }
         .decode(type: DataResponse<T>.self, decoder: JSONDecoder())
+        .handleEvents(receiveCompletion: { comp in
+
+            switch comp{
+            case .finished:
+                break
+            case .failure(let e):
+                print(e, urlRequest.url)
+            }
+
+        })
+        .map {
+            print( "[!!!] \(params["permalink"] ?? "- "): \($0.ms) ms")
+//            print( "[!!!] \(urlRequest.url)")
+            return $0
+        }
         .eraseToAnyPublisher()
     }
 
