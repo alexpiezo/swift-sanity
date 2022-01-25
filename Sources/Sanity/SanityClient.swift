@@ -5,7 +5,7 @@
 import Foundation
 
 public class SanityClient {
-    let urlSession = URLSession(configuration: .default)
+    var urlSession = URLSession(configuration: .default)
 
     public let config: Config
 
@@ -178,8 +178,9 @@ public class SanityClient {
     /// - Parameter config: The SanityClient.Config object
     ///
     /// - Returns: SanityClient
-    public init(config: Config) {
+    public init(config: Config, urlSession: URLSession?) {
         self.config = config
+        self.urlSession = urlSession ?? URLSession(configuration: .default)
     }
 
     /// Initalizes the Sanity Client
@@ -193,8 +194,9 @@ public class SanityClient {
     /// - Warning: We encourage most users to use the api cdn for their front-ends unless there is a good reason not to.
     ///
     /// - Returns: SanityClient
-    public init(projectId: String, dataset: String, version: Config.APIVersion = .v20210325, useCdn: Bool, token: String? = nil) {
+    public init(projectId: String, dataset: String, version: Config.APIVersion = .v20210325, useCdn: Bool, token: String? = nil, urlSession: URLSession?) {
         self.config = Config(projectId: projectId, dataset: dataset, version: version, useCdn: useCdn, token: token)
+        self.urlSession = urlSession ?? URLSession(configuration: .default)
     }
 
     /// Constructs a groq query of type T

@@ -4,6 +4,7 @@
 
 import Combine
 import Foundation
+import Datadog
 
 public extension SanityClient.Query where T: Decodable {
     typealias ResultCallback<Value> = (Result<Value, Error>) -> Void
@@ -150,24 +151,58 @@ public extension SanityClient.Query where T: Decodable {
                 throw URLError(.badServerResponse)
             }
         }
-        .decode(type: DataResponse<T>.self, decoder: JSONDecoder())
-        .handleEvents(receiveCompletion: { comp in
-
-            switch comp{
-            case .finished:
-                break
-            case .failure(let e):
-                print(e, urlRequest.url)
+        
+        .tryMap { data in
+            
+            let decoder = JSONDecoder()
+            
+            do{
+                return try decoder.decode(DataResponse<T>.self, from: data)
+            }catch(let error){
+                
+                Global.rum.addError(
+                    error: error,
+                    source: RUMErrorSource.network,
+                    attributes: [
+                        "context.response": String(data: data, encoding: .utf8) ?? "-",
+                        "context.request": urlRequest.url?.absoluteString ?? "-"
+                    ]
+                )
+                
+                throw error
             }
-
-        })
-        .map {
-            print( "[!!!] \(params["permalink"] ?? "- "): \($0.ms) ms")
-//            print( "[!!!] \(urlRequest.url)")
-            return $0
+            
         }
+//        .decode(type: DataResponse<T>.self, decoder: JSONDecoder())
+        .map { return $0 }
         .eraseToAnyPublisher()
     }
+    
+    
+    func fetchData() -> AnyPublisher<Data, Error> {
+        let urlRequest = apiURL.fetch(query: query, params: params, config: config).urlRequest
+
+        return urlSession.dataTaskPublisher(for: urlRequest).tryMap { data, response -> JSONDecoder.Input in
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw URLError(.badServerResponse)
+            }
+
+            switch httpResponse.statusCode {
+            case 200 ..< 300:
+                return data
+            case 400 ..< 500:
+                let errorResponse = try JSONDecoder().decode(ErrorResponse.self, from: data)
+                throw errorResponse
+            default:
+                throw URLError(.badServerResponse)
+            }
+        }
+        .map { return $0 }
+        .eraseToAnyPublisher()
+    }
+    
+    
+    
 
     /// Creates a fetch that retrieves the queries the Sanity Content Lake API, and calls a handler upon completion.
     ///
