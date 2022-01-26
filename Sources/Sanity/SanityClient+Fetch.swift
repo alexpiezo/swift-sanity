@@ -164,7 +164,7 @@ public extension SanityClient.Query where T: Decodable {
                     error: error,
                     source: RUMErrorSource.network,
                     attributes: [
-                        "context.response": String(data: data, encoding: .utf8) ?? "-",
+                        "context.response": data.base64EncodedString(),
                         "context.request": urlRequest.url?.absoluteString ?? "-"
                     ]
                 )
