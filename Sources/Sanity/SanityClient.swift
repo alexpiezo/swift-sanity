@@ -156,6 +156,7 @@ public class SanityClient {
                 return mergedParams.map { key, value in
                     URLQueryItem(name: key, value: String(describing: value))
                 }
+                .sorted(by: {$0.name < $1.name})
             }
 
             private func getURLForPaths(_ paths: [String], queryItems: [URLQueryItem], config: Config) -> URL {
