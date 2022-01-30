@@ -17,7 +17,7 @@ let package = Package(
     ],
     dependencies: [
         .package(name: "EventSource", url: "https://github.com/inaka/EventSource.git", .revision("78934b361891c7d0fa3d399d128e959f0c94d267")),
-        .package( url: "https://github.com/DataDog/dd-sdk-ios.git", .upToNextMajor(from: "1.0.0")),
+//        .package( url: "https://github.com/DataDog/dd-sdk-ios.git", .upToNextMajor(from: "1.0.0")),
     
 
         // .package(url: /* package url */, from: "1.0.0"),
@@ -27,7 +27,7 @@ let package = Package(
         // Targets can depend on other targets in this package, and on products in packages this package depends on.
         .target(
             name: "Sanity",
-            dependencies: ["EventSource", .product(name: "DatadogStatic", package: "dd-sdk-ios")]),
+            dependencies: ["EventSource"]),
         .testTarget(
             name: "SanityTests",
             dependencies: ["Sanity"]),

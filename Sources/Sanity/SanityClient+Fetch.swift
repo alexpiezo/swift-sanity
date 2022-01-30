@@ -4,7 +4,6 @@
 
 import Combine
 import Foundation
-import Datadog
 
 public extension SanityClient.Query where T: Decodable {
     typealias ResultCallback<Value> = (Result<Value, Error>) -> Void
@@ -141,6 +140,15 @@ public extension SanityClient.Query where T: Decodable {
                 throw URLError(.badServerResponse)
             }
 
+            print("---")
+            print("[SF] age: \(httpResponse.value(forHTTPHeaderField: "x-sanity-age")!)")
+            print("[SF] date: \(httpResponse.value(forHTTPHeaderField: "Date")!)")
+            print("---")
+
+//            if httpResponse.value(forHTTPHeaderField: "x-sanity-age")! == "0"{
+//                print("[SF]", urlRequest.url)
+//            }
+
             switch httpResponse.statusCode {
             case 200 ..< 300:
                 return data
@@ -151,34 +159,25 @@ public extension SanityClient.Query where T: Decodable {
                 throw URLError(.badServerResponse)
             }
         }
-        
+
         .tryMap { data in
-            
+
             let decoder = JSONDecoder()
-            
-            do{
-                return try decoder.decode(DataResponse<T>.self, from: data)
-            }catch(let error){
-                
-                Global.rum.addError(
-                    error: error,
-                    source: RUMErrorSource.network,
-                    attributes: [
-                        "context.response": data.base64EncodedString(),
-                        "context.request": urlRequest.url?.absoluteString ?? "-"
-                    ]
-                )
-                
-                throw error
+
+            do {
+                let d = try decoder.decode(DataResponse<T>.self, from: data)
+//                print("[SF] \(d.ms)")
+                return d
+            } catch {
+                throw SanityResponseDecodingError(query: urlRequest.url?.absoluteString ?? "-",
+                                                  data: data)
             }
-            
         }
 //        .decode(type: DataResponse<T>.self, decoder: JSONDecoder())
-        .map { return $0 }
+        .map { $0 }
         .eraseToAnyPublisher()
     }
-    
-    
+
     func fetchData() -> AnyPublisher<Data, Error> {
         let urlRequest = apiURL.fetch(query: query, params: params, config: config).urlRequest
 
@@ -197,12 +196,9 @@ public extension SanityClient.Query where T: Decodable {
                 throw URLError(.badServerResponse)
             }
         }
-        .map { return $0 }
+        .map { $0 }
         .eraseToAnyPublisher()
     }
-    
-    
-    
 
     /// Creates a fetch that retrieves the queries the Sanity Content Lake API, and calls a handler upon completion.
     ///
@@ -338,5 +334,14 @@ public extension SanityClient.Query {
         }
 
         task.resume()
+    }
+}
+
+public struct SanityResponseDecodingError: Error {
+    public let query: String
+    public let data: Data
+
+    public var errorDescription: String? {
+        "Decoding Error"
     }
 }
