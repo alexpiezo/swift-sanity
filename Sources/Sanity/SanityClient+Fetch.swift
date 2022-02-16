@@ -140,15 +140,6 @@ public extension SanityClient.Query where T: Decodable {
                 throw URLError(.badServerResponse)
             }
 
-            print("---")
-            print("[SF] age: \(httpResponse.value(forHTTPHeaderField: "x-sanity-age")!)")
-            print("[SF] date: \(httpResponse.value(forHTTPHeaderField: "Date")!)")
-            print("---")
-
-//            if httpResponse.value(forHTTPHeaderField: "x-sanity-age")! == "0"{
-//                print("[SF]", urlRequest.url)
-//            }
-
             switch httpResponse.statusCode {
             case 200 ..< 300:
                 return data
@@ -165,9 +156,7 @@ public extension SanityClient.Query where T: Decodable {
             let decoder = JSONDecoder()
 
             do {
-                let d = try decoder.decode(DataResponse<T>.self, from: data)
-//                print("[SF] \(d.ms)")
-                return d
+                return try decoder.decode(DataResponse<T>.self, from: data)                
             } catch {
                 throw SanityResponseDecodingError(query: urlRequest.url?.absoluteString ?? "-",
                                                   data: data)
