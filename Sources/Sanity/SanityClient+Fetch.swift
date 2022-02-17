@@ -156,12 +156,7 @@ public extension SanityClient.Query where T: Decodable {
             let decoder = JSONDecoder()
 
             do {
-<<<<<<< Updated upstream
-                return try decoder.decode(DataResponse<T>.self, from: data)                
-=======
-                let d = try decoder.decode(DataResponse<T>.self, from: data)
-                return d
->>>>>>> Stashed changes
+                return try decoder.decode(DataResponse<T>.self, from: data)
             } catch {
                 throw SanityResponseDecodingError(query: urlRequest.url?.absoluteString ?? "-",
                                                   data: data)
