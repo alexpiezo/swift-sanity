@@ -156,7 +156,12 @@ public extension SanityClient.Query where T: Decodable {
             let decoder = JSONDecoder()
 
             do {
+<<<<<<< Updated upstream
                 return try decoder.decode(DataResponse<T>.self, from: data)                
+=======
+                let d = try decoder.decode(DataResponse<T>.self, from: data)
+                return d
+>>>>>>> Stashed changes
             } catch {
                 throw SanityResponseDecodingError(query: urlRequest.url?.absoluteString ?? "-",
                                                   data: data)
@@ -202,10 +207,12 @@ public extension SanityClient.Query where T: Decodable {
     ///     }
     /// }
     /// ```
+    @available(*, renamed: "fetch()")
     func fetch(completion: @escaping ResultCallback<DataResponse<T>>) {
         let urlRequest = apiURL.fetch(query: query, params: params, config: config).urlRequest
 
-        let task = urlSession.dataTask(with: urlRequest) { data, response, _ in
+        let task = urlSession.dataTask(with: urlRequest) { data, response, error in
+        
             guard let httpResponse = response as? HTTPURLResponse, let data = data else {
                 return completion(.failure(URLError(.badServerResponse)))
             }
@@ -217,8 +224,9 @@ public extension SanityClient.Query where T: Decodable {
                 do {
                     let data = try decoder.decode(DataResponse<T>.self, from: data)
                     completion(.success(data))
-                } catch let e {
-                    completion(.failure(e))
+                } catch {
+                    let error = SanityResponseDecodingError(query: urlRequest.url?.absoluteString ?? "-", data: data)
+                    completion(.failure(error))
                 }
             case 400 ..< 500:
                 if let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
@@ -232,6 +240,15 @@ public extension SanityClient.Query where T: Decodable {
 
         task.resume()
     }
+    
+    func fetch() async throws -> SanityClient.Query<T>.DataResponse<T> {
+        return try await withCheckedThrowingContinuation { continuation in
+            fetch() { result in
+                continuation.resume(with: result)
+            }
+        }
+    }
+    
 }
 
 public extension SanityClient.Query {
