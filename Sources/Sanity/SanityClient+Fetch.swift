@@ -154,10 +154,12 @@ public extension SanityClient.Query where T: Decodable {
         .tryMap { data in
 
             let decoder = JSONDecoder()
-
+            decoder.dateDecodingStrategy = .iso8601
+            
             do {
                 return try decoder.decode(DataResponse<T>.self, from: data)
             } catch {
+    
                 throw SanityResponseDecodingError(query: urlRequest.url?.absoluteString ?? "-",
                                                   data: data)
             }
@@ -205,7 +207,7 @@ public extension SanityClient.Query where T: Decodable {
     @available(*, renamed: "fetch()")
     func fetch(completion: @escaping ResultCallback<DataResponse<T>>) {
         let urlRequest = apiURL.fetch(query: query, params: params, config: config).urlRequest
-
+        
         let task = urlSession.dataTask(with: urlRequest) { data, response, error in
         
             guard let httpResponse = response as? HTTPURLResponse, let data = data else {
@@ -213,16 +215,31 @@ public extension SanityClient.Query where T: Decodable {
             }
 
             let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
 
             switch httpResponse.statusCode {
             case 200 ..< 300:
                 do {
                     let data = try decoder.decode(DataResponse<T>.self, from: data)
                     completion(.success(data))
+                } catch let DecodingError.dataCorrupted(context) {
+                    print(context)
+                } catch let DecodingError.keyNotFound(key, context) {
+                    print("Key '\(key)' not found:", context.debugDescription)
+                    print("codingPath:", context.codingPath)
+                } catch let DecodingError.valueNotFound(value, context) {
+                    print("Value '\(value)' not found:", context.debugDescription)
+                    print("codingPath:", context.codingPath)
+                } catch let DecodingError.typeMismatch(type, context)  {
+                    print("Type '\(type)' mismatch:", context.debugDescription)
+                    print("codingPath:", context.codingPath)
                 } catch {
-                    let error = SanityResponseDecodingError(query: urlRequest.url?.absoluteString ?? "-", data: data)
-                    completion(.failure(error))
+                    print(error.localizedDescription)
+                    let error2 = SanityResponseDecodingError(query: urlRequest.url?.absoluteString ?? "-", data: data)
+                    completion(.failure(error2))
                 }
+                
+                
             case 400 ..< 500:
                 if let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
                     return completion(.failure(errorResponse))

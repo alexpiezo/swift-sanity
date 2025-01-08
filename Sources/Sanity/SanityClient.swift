@@ -83,11 +83,18 @@ public class SanityClient {
             components.host = self.apiHost.hostForProjectId(self.projectId)
             components.path = "/" + self.version.string + path
             components.queryItems = queryItems
+            
+            components.percentEncodedQuery = components.percentEncodedQuery?
+                .replacingOccurrences(of: "+", with: "%2B")
+                
+            
             return components.url!
         }
 
         internal func getURLRequest(path: String = "/", queryItems: [URLQueryItem]? = nil) -> URLRequest {
             let url = getURL(path: path, queryItems: queryItems)
+            
+            
             var request = URLRequest(url: url)
 
             if let token = self.token {
@@ -154,7 +161,7 @@ public class SanityClient {
                 let mergedParams: [String: Any] = defaults.merging(prefixedParams) { _, new in new }
 
                 return mergedParams.map { key, value in
-                    URLQueryItem(name: key, value: String(describing: value))
+                    return URLQueryItem(name: key, value: String(describing: value))
                 }
                 .sorted(by: {$0.name < $1.name})
             }
